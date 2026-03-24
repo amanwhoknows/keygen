@@ -27,6 +27,27 @@ cursor.execute('''
 ''')
 conn.commit()
 
+@bot.message_handler(commands=['backup'])
+def handle_backup(message):
+    # Security check: Only let admins use this command
+    if message.from_user.id not in ADMIN_IDS:
+        return
+
+    bot.reply_to(message, "⏳ Fetching your database backup...", parse_mode="Markdown")
+    
+    try:
+        # Open the database file in binary read mode ('rb')
+        with open(DB_PATH, 'rb') as db_file:
+            # Send the file directly to the chat
+            bot.send_document(
+                message.chat.id, 
+                db_file, 
+                caption="📦 **Here is your latest Database Backup!**\n\nKeep this safe.",
+                parse_mode="Markdown"
+            )
+    except Exception as e:
+        bot.reply_to(message, f"❌ **Failed to send backup:**\n`{e}`", parse_mode="Markdown")
+        
 def check_membership(user_id, chat_username):
     """Checks if the user is currently in the specified Telegram chat."""
     try:
