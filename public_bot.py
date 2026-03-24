@@ -8,6 +8,7 @@ from datetime import datetime, timedelta
 
 # --- CONFIGURATION ---
 API_TOKEN = os.environ.get('BOT_TOKEN')
+ADMIN_IDS = [5663906373]
 CHANNEL_USERNAME = '@SHADYTOOLS' # Must include the @ symbol
 GROUP_USERNAME = '@SHADYCHATGROUP'     # Must include the @ symbol
 MASTER_SECRET = os.environ.get('MASTER_SECRET').encode('utf-8')
@@ -73,7 +74,53 @@ def send_welcome(message):
             f"*(Note: Limit 1 HWID per user. 24-hour cooldown).* "
         )
         bot.reply_to(message, text, parse_mode="Markdown")
+@bot.message_handler(commands=['broadcast'])
+def handle_broadcast(message):
+    # Security check: Only let admins use this command
+    if message.from_user.id not in ADMIN_IDS:
+        return
 
+    # Remove the word '/broadcast' from the message they typed
+    text_to_send = message.text.replace('/broadcast', '').strip()
+    
+    if not text_to_send:
+        bot.reply_to(message, "⚠️ **Usage:** `/broadcast Your message goes here`", parse_mode="Markdown")
+        return
+
+    # Fetch every user ID from our database
+    cursor.execute('SELECT user_id FROM keys')
+    users = cursor.fetchall()
+
+    if not users:
+        bot.reply_to(message, "❌ No users found in the database.")
+        return
+
+    bot.reply_to(message, f"⏳ **Broadcasting to {len(users)} users...** Please wait.", parse_mode="Markdown")
+
+    success_count = 0
+    fail_count = 0
+
+    # Loop through everyone and send the message
+    for user in users:
+        uid = user[0]
+        try:
+            bot.send_message(uid, text_to_send, parse_mode="Markdown")
+            success_count += 1
+            # TELEGRAM LIMIT: Bots can only send ~30 messages per second. 
+            # This tiny pause prevents Telegram from banning your bot for spam.
+            time.sleep(0.05) 
+        except Exception:
+            # If it fails, it usually means the user blocked the bot or deleted their account
+            fail_count += 1
+
+    bot.reply_to(
+        message, 
+        f"✅ **Broadcast Complete!**\n\n"
+        f"📩 **Sent Successfully:** `{success_count}`\n"
+        f"🚫 **Failed (Blocked bot):** `{fail_count}`",
+        parse_mode="Markdown"
+    )
+    
 @bot.message_handler(func=lambda message: True)
 def handle_keygen(message):
     user_id = message.from_user.id
