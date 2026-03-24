@@ -36,9 +36,8 @@ def handle_backup(message):
     bot.reply_to(message, "⏳ Fetching your database backup...", parse_mode="Markdown")
     
     try:
-        # Open the database file in binary read mode ('rb')
-        with open(DB_PATH, 'rb') as db_file:
-            # Send the file directly to the chat
+        # HARDCODED FIX: Explicitly target the Railway volume path
+        with open('/data/users.db', 'rb') as db_file:
             bot.send_document(
                 message.chat.id, 
                 db_file, 
